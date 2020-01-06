@@ -17,8 +17,9 @@ subroutine acceptrebuig(ndat,xnums,a,b,M,funci)
     ! a,b --> extrems de l'interval on està definida la nova variable aleatòria (input)
     ! M --> cota superior (input)
     ! funci --> densitat de probabilitat segons la qual està distribuida la nova var. aleat. (output)
-    ! Nota --> la subrutina també calcula la variància i la desviació estàndard de la nova
+    ! Nota: la subrutina també calcula la variància i la desviació estàndard de la nova
     ! distribució. Es pot esborrar tranquilament aquesta part sense afectar la generació de nombres. 
+    ! Nota2: el domini de la variable aleatòria ha de ser finit, i la densitat ha de ser acotada.
     implicit none
     double precision xnums(ndat),a,b,M,funci,x1,x2,p,x
     double precision valmitj,var,desvest

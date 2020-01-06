@@ -7,13 +7,15 @@ program testo
     call srand(20034276)
     pi=dacos(-1.d0)
 
-    a=-L
-    b=L
+    a=0.d0
+    b=pi
     k=24
     N=2**k
-    M=0.35d0
+    M=1.1d0
 
-    print*,integral,error
+    call acceptrebuigintegral(a,b,N,M,f,integral,error)
+    print*,integral
+    print*,error
 end program testo
 
 ! Subrutina trapezis --> Calcula una integral 1-D per trapezis
@@ -151,16 +153,17 @@ subroutine gl2(x1,x2,funci,integral)
 end subroutine
 
 ! Subrutina acceptrebuigintegral --> Calcula una integral 1-D amb accept-rebuig
-subroutine acceptrebuigintegral(a,b,N,M,funci,integral)
+subroutine acceptrebuigintegral(a,b,N,M,funci,integral,error)
     ! a,b --> Extrems de l'interval d'integració
     ! N --> nombre de números aleatoris que es vol generar
     ! M --> cota superior
     ! funci --> funció a integrar
     ! integral --> Valor de la integral (a calcular)
+    ! error --> Estimació de l'error comès (output)
     ! Nota: aquest mètode només serveix en dominis acotats on la funció a
     !       integrar sigui positiva
     implicit none
-    double precision a,b,M,funci,integral
+    double precision a,b,M,funci,integral,error
     integer N
     double precision x,p
     integer counter_dins,counter_fora
@@ -178,6 +181,7 @@ subroutine acceptrebuigintegral(a,b,N,M,funci,integral)
     enddo
 
     integral=M*(b-a)*(counter_dins/dble(counter_dins+counter_fora))
+    error=(M*(b-a)/dsqrt(dble(N)))*dsqrt((counter_dins/dble(N))*(1.d0-(counter_dins/dble(N))))
 
     return
 end subroutine acceptrebuigintegral
@@ -198,8 +202,9 @@ subroutine montecarlocru(a,b,N,funci,integral,error)
     error=0.d0
 
     do i=1,N
-        integral=integral+funci((b-a)*rand()+a)
-        error=error+(funci((b-a)*rand()+a))**2.d0
+        x=rand()
+        integral=integral+funci((b-a)*x+a)
+        error=error+(funci((b-a)*x+a))**2.d0
     enddo
 
     integral=integral*(b-a)/dble(N)
@@ -214,7 +219,7 @@ double precision function f(x)
     double precision pi,L
     common/cts/pi,L
 
-    f=(dsin((8.d0*pi*(x-L))/(2.d0*L)))**2.d0
+    f=(dsin(x))**2.d0
 
     return
 end function f

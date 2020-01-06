@@ -1,6 +1,6 @@
 program test1
     implicit none
-    double precision, allocatable :: y0(:),y1(:)
+    double precision, allocatable :: y0(:),y1(:),y1meh(:)
     integer nvar,i
     double precision g,l,h,f
     common/cts/g,l
@@ -10,13 +10,31 @@ program test1
     nvar=2
     allocate(y0(nvar))
     allocate(y1(nvar))
-    h=0.001d0
+    allocate(y1meh(nvar))
+    h=0.01d0
 
     y0=(/0.d0,1.d0/)
 
-    call euler(0.d0,h,nvar,y0,y1)
-    print*,y1
+    open(11,file="aux.dat")
+    write(11,*) "# Temps,    Angle"
+    do i=1,1000
+        call predcorr(0.d0,h,nvar,y0,y1)
+        write(11,*) i*h,y1(1)
+        y0=y1
+    enddo
 
+    open(12,file="auxb.dat")
+    write(12,*) "# Temps,    Angle"
+    call euler(0.d0,h,nvar,y0,y1)
+    y1meh=y1
+    do i=1,1000
+        call eulerm(0.d0,h,nvar,y0,y1meh,y1)
+        write(12,*) i*h,y1(1)
+        y0=y1meh
+        y1meh=y1
+    enddo
+
+    close(11)
 end program test1
 
 ! Subrutina euler --> Calcula un pas del mètode d'euler N-D
@@ -39,21 +57,22 @@ subroutine euler(x,dx,nequs,yyin,yyout)
 end subroutine euler
 
 ! Subrutina eulerm --> Calcula un pas del mètode d'euler millorat N-D
-subroutine eulerm(x,dx,nequs,yyin,yyout)
+subroutine eulerm(x,dx,nequs,yyin_aant,yyin_ant,yyout)
     ! x --> Variable independent del problema
     ! dx --> Pas 
     ! nequs --> Nombre d'equacions 
-    ! yyin --> Vector amb les dades del punt 2 vegades anterior
+    ! yyin_aant --> Vector amb les dades del punt 2 vegades anterior
+    ! yyin_ant --> Vector amb les dades del punt anterior
     ! yyout --> Vector amb les dades del punt següent
     ! Nota1: aquesta subrutina necessita la subrutina derivades per funcionar
     ! Nota2: el primer pas s'ha de donar amb Euler simple
     implicit none
-    double precision x,dx,yyin(nequs),yyout(nequs)
+    double precision x,dx,yyin_aant(nequs),yyin_ant(nequs),yyout(nequs)
     integer nequs
     double precision dyout(nequs)
 
-    call derivades(nequs,x,yyin,dyout)
-    yyout=yyin+2.d0*dx*dyout
+    call derivades(nequs,x,yyin_ant,dyout)
+    yyout=yyin_aant+2.d0*dx*dyout
 
     return
 end subroutine eulerm
@@ -76,7 +95,7 @@ subroutine predcorr(x,dx,nequs,yyin,yyout)
     call derivades(nequs,x,yyin,dyout)
     y_pred=yyin+dx*dyout
     ! Càlcul de la part de yyout que conté f(x,y_pred)
-    call derivades(nequs,x,y_pred,dyout)
+    call derivades(nequs,x+dx,y_pred,dyout)
     yyout=yyin+0.5*dx*dyout
     ! Càlcul de la part de yyout que conté f(x,yyin)
     call derivades(nequs,x,yyin,dyout)
@@ -97,15 +116,11 @@ subroutine RLSTN3(x,dx,nequs,yyin,yyout)
     integer nequs,i
     double precision x,dx,yyin(nequs),yyout(nequs)
     double precision k1(nequs),k2(nequs),k3(nequs)
-    double precision dyout(nequs) ! Vector mut necessari per cridar la subrutina derivades
 
     ! Càlcul dels vectors k1,k2,k3 
-    call derivades(nequs,x,yyin,dyout)
-    k1=dyout
-    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k1,dyout)
-    k2=dyout
-    call derivades(nequs,x+0.75d0*dx,yyin+(3.d0*dx/4.d0)*k2,dyout)
-    k3=dyout
+    call derivades(nequs,x,yyin,k1)
+    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k1,k2)
+    call derivades(nequs,x+0.75d0*dx,yyin+(3.d0*dx/4.d0)*k2,k3)
 
     ! Càlcul del vector yyout 
     yyout=yyin+dx/9.d0*(2.d0*k1+3.d0*k2+4.d0*k3)
@@ -120,21 +135,17 @@ subroutine RK4(x,dx,nequs,yyin,yyout)
     ! nequs --> Nombre d'equacions 
     ! yyin --> Vector amb les dades del punt anterior
     ! yyout --> Vector amb les dades del punt següent
+    ! Nota: aquesta subrutina necessita la subrutina derivades per funcionar
     implicit none
     integer nequs,i
     double precision x,dx,yyin(nequs),yyout(nequs)
     double precision k1(nequs),k2(nequs),k3(nequs),k4(nequs)
-    double precision dyout(nequs) ! Vector mut necessari per cridar la subrutina derivades
 
     ! Càlcul dels vectors k1,k2,k3 
-    call derivades(nequs,x,yyin,dyout)
-    k1=dyout
-    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k1,dyout)
-    k2=dyout
-    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k2,dyout)
-    k3=dyout
-    call derivades(nequs,x+dx,yyin+dx*k3,dyout)
-    k4=dyout
+    call derivades(nequs,x,yyin,k1)
+    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k1,k2)
+    call derivades(nequs,x+dx/2.d0,yyin+dx/2.d0*k2,k3)
+    call derivades(nequs,x+dx,yyin+dx*k3,k4)
 
     ! Càlcul del vector yyout 
     yyout=yyin+dx/6.d0*(k1+2.d0*k2+2.d0*k3+k4)
@@ -190,7 +201,7 @@ subroutine solver(T_old,T_new,h,funci,icontrol)
     implicit none
     integer i,j,Nx,Ny,icontrol
     double precision T_old(Nx,Ny),T_new(Nx,Ny),h,funci,Lx,Ly,w
-    common/cts/Lx,Ly,Nx,Ny,w
+    common/cts2/Lx,Ly,Nx,Ny,w
 
     if (icontrol.eq.0) then ! Jacobi
         do i=2,Nx-1
