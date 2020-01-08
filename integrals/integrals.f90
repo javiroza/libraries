@@ -95,8 +95,8 @@ subroutine simpson38(x1,x2,k,funci,integral)
     integral=0.d0
 
     do i=0,N-3,3
-        integral=integral+funci(x1+i*h)+3.d0*funci(x1+(i+1)*h)
-        integral=integral+3.d0*funci(x1+(i+1)*h)+funci(x1+(i+4)*h)
+        integral=integral+funci(x1+i*h)+3.d0*funci(x1+(i+1)*h)+ &
+        3.d0*funci(x1+(i+2)*h)+funci(x1+(i+3)*h)
     enddo
 
     integral=integral*3.d0*h/8.d0
