@@ -12,10 +12,11 @@ program testo
     k=24
     N=2**k
     M=1.1d0
+    error=1.d-9
 
-    call acceptrebuigintegral(a,b,N,M,f,integral,error)
+    call boole(a,b,k,f,integral)
     print*,integral
-    print*,error
+
 end program testo
 
 ! Subrutina trapezis --> Calcula una integral 1-D per trapezis
@@ -77,7 +78,7 @@ subroutine simpson(x1,x2,k,funci,integral)
     return
 end subroutine simpson
 
-! Subrutina simpson38 --> Calcula una integral 1-D per Simpson
+! Subrutina simpson38 --> Calcula una integral 1-D per Simpson 3/8
 subroutine simpson38(x1,x2,k,funci,integral)
     ! x1,x2 --> Extrems de l'interval d'integració
     ! k --> N=2**k intervals
@@ -131,6 +132,47 @@ subroutine boole(x1,x2,k,funci,integral)
 
     return
 end subroutine boole
+
+! Subrutina romberg --> Calcula una integral 1-D per Romgerg
+subroutine romberg (x1,x2,funci,integral,erro)
+    !x1, x2: límits d'integració.
+    !integral: doncs això.
+    !erro: error màxim desitjat.
+    implicit none
+    integer i, j
+    double precision x1, x2, integral, erro,funci
+    double precision, allocatable :: Tij(:), Tij_vell(:)
+    external funci
+    !i, j: paràmetres per sengles bucles.
+    !Tij, Tij_vell: strings per als valors calculats de trapezis.
+    !Donem mida a Tij i Tij_vell i els assignem els primers valors.
+    allocate (Tij_vell(0:0))
+    call trapezis(x1, x2, 1, funci, Tij_vell(0))
+    allocate (Tij(0:1))
+    call trapezis(x1, x2, 2, funci, Tij(0))
+    !Calculem T1,1 amb els paràmetres anteriors.
+    Tij(1) = (4.d0 * Tij(0) - Tij_vell(0)) / 3.d0
+    i = 1
+    !Fem iterar el mètode mentre no assolim l'error desitjat.
+    do while (dabs(Tij(i)-Tij_vell(i-1)) .gt. erro)
+        i = i + 1
+        !Reajustem Tij_vell perquè guardi l'anterior Tij.
+        deallocate (Tij_vell)
+        allocate (Tij_vell(0:i-1))
+        Tij_vell = Tij
+        !Reajustem Tij per a trobar la nova columna.
+        deallocate (Tij)
+        allocate (Tij(0:i))
+        !Trobem el valor Ti,0
+        call trapezis(x1, x2, 2**i, funci, Tij(0))
+        !A partir d'aquest darrer i Tij_vell trobem els valors fins a Ti,i.
+        do j = 1, i
+            Tij(j) = (4.d0**j * Tij(j-1) - Tij_vell(j-1)) / (4**j - 1)
+        enddo
+    enddo
+    !Assignem Ti,i com a valor de la integral que cercàvem.
+    integral = Tij(i)
+end subroutine romberg
 
 ! Subrutina gl2 --> Calcula una integral 1-D amb Gauss-Legendre 2
 subroutine gl2(x1,x2,funci,integral)
